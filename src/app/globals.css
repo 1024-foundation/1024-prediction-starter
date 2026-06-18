@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Surface tokens mirrored from the real 1024 frontend. */
+  --surface-bg: #101010;
+  --surface-card: rgba(255, 255, 255, 0.04);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --text-tertiary: rgba(255, 255, 255, 0.55);
+}
+
+html,
+body {
+  background: var(--surface-bg);
+  color: #e7e7ea;
+}
+
+/* Thin, unobtrusive scrollbars to match the dark UI. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

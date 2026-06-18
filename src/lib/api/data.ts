@@ -7,7 +7,7 @@
 
 import { apiGet, apiAuthed, rawCall } from "./server";
 import { isActive, pricePct } from "../format";
-import type { Collection, Market, Page, OrderBook, MarketPrices, PredictionUserStats, Position } from "./types";
+import type { Collection, Market, Page, OrderBook, OrderBookLevel, MarketPrices, PredictionUserStats, Position } from "./types";
 
 // ── Discovery ───────────────────────────────────────────────────────────────
 
@@ -68,9 +68,43 @@ export function getMarket(id: string): Promise<Market> {
   return apiGet<Market>(`/prediction/markets/${id}`, { revalidate: 10 });
 }
 
-/** `GET /prediction/markets/:id/orderbook?outcomeIndex=` (price book for one side). */
+/**
+ * `GET /prediction/markets/:id/orderbook?outcomeIndex=` — RESTING orders only.
+ *
+ * ⚠️ Important for 1024: the market-maker (LP) provides *virtual / JIT* liquidity
+ * that never rests in the book — it is materialized into the book only at match
+ * time. So `/orderbook` and `/depth` return a sparse, often one-sided resting
+ * book that does NOT reflect the tradeable liquidity the first-party UI shows.
+ * For a book that includes the LP's virtual ladder, use getAllDepths() below
+ * (the server overlays the virtual ladder there for display; matching stays JIT).
+ */
 export function getOrderBook(id: string, outcomeIndex: 0 | 1): Promise<OrderBook> {
   return apiGet<OrderBook>(`/prediction/markets/${id}/orderbook`, { query: `outcomeIndex=${outcomeIndex}`, revalidate: 5 });
+}
+
+interface DepthSnapshot {
+  outcomeIndex: number;
+  bids?: Array<{ price: number; amount?: number; shares?: number }>;
+  asks?: Array<{ price: number; amount?: number; shares?: number }>;
+}
+
+/**
+ * `GET /prediction/markets/:id/all-depths` — every outcome's book WITH the LP
+ * virtual ladder overlaid (this is what the first-party frontend + WS show).
+ * Returns a map keyed by outcomeIndex. Levels: price is a float [0,1]; the size
+ * field is `amount` here (vs `shares` on /orderbook) — normalized to `shares`.
+ */
+export async function getAllDepths(
+  id: string,
+): Promise<Record<number, { bids: OrderBookLevel[]; asks: OrderBookLevel[] }>> {
+  const snaps = await apiGet<DepthSnapshot[]>(`/prediction/markets/${id}/all-depths`, { revalidate: 5 }).catch(
+    () => [] as DepthSnapshot[],
+  );
+  const norm = (lvls?: DepthSnapshot["bids"]): OrderBookLevel[] =>
+    (lvls ?? []).map((l) => ({ price: Number(l.price) || 0, shares: Number(l.amount ?? l.shares) || 0 }));
+  const out: Record<number, { bids: OrderBookLevel[]; asks: OrderBookLevel[] }> = {};
+  for (const s of snaps ?? []) out[Number(s.outcomeIndex)] = { bids: norm(s.bids), asks: norm(s.asks) };
+  return out;
 }
 
 /**

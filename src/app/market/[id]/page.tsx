@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, BarChart3 } from "lucide-react";
-import { getMarket, getOrderBook, getBatchPrices } from "@/lib/api/data";
+import { getMarket, getAllDepths, getBatchPrices } from "@/lib/api/data";
 import { hasCredentials, ApiError } from "@/lib/api/server";
 import { OrderBook } from "@/components/OrderBook";
 import { TradePanel } from "@/components/TradePanel";
@@ -25,11 +25,11 @@ export default async function MarketPage({ params }: { params: { id: string } })
     throw e;
   }
 
-  const [yesBook, noBook, prices] = await Promise.all([
-    getOrderBook(params.id, 0).catch(() => emptyBook),
-    getOrderBook(params.id, 1).catch(() => emptyBook),
-    getBatchPrices([params.id]),
-  ]);
+  // Use /all-depths: it overlays the LP's virtual ladder (what the first-party
+  // UI shows), unlike /orderbook & /depth which return sparse RESTING orders.
+  const [depths, prices] = await Promise.all([getAllDepths(params.id), getBatchPrices([params.id])]);
+  const yesBook = depths[0] ?? emptyBook;
+  const noBook = depths[1] ?? emptyBook;
 
   const o0 = prices[params.id]?.outcomes?.[0];
   const yesE6 = o0?.yesPriceE6 ?? o0?.priceE6 ?? 500000;
@@ -37,9 +37,9 @@ export default async function MarketPage({ params }: { params: { id: string } })
   const defaultYesCents = pricePct(yesE6);
   const noCents = pricePct(noE6);
 
-  // The public API returns only resting depth (empty for illiquid markets).
-  // When a book is empty, show an indicative ladder around the mid — the same
-  // shape the LP's virtual liquidity would take on the real exchange.
+  // /all-depths already overlays the LP virtual ladder. If a market still comes
+  // back empty (no LP quoting it), fall back to an indicative ladder around the
+  // mid so the book reads sensibly. (Both clearly distinguished in the UI.)
   const seed = seedFromId(params.id);
   const yesEmpty = yesBook.bids.length === 0 && yesBook.asks.length === 0;
   const noEmpty = noBook.bids.length === 0 && noBook.asks.length === 0;

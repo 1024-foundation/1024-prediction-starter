@@ -8,7 +8,9 @@ orders, and track positions.
 
 It is deliberately small and heavily commented. Read the code top to bottom and
 you understand the whole integration surface. Every screen renders **live data**
-from the 1024 testnet out of the box (no credentials needed to browse).
+from 1024 **mainnet** out of the box (no credentials needed to browse). Set
+`API_1024_BASE=https://api-testnet-stable.1024ex.com` before configuring a key
+if you want to fire authenticated test orders safely.
 
 > Next.js (App Router) + TypeScript + Tailwind. No database, no state library —
 > just the 1024 Public API and a thin server-side signing proxy. The UI (the
@@ -19,7 +21,7 @@ from the 1024 testnet out of the box (no credentials needed to browse).
 | --- | --- | --- |
 | Home | Event collections (the entry point most users browse) | `GET /prediction/collections` |
 | Collection | Binary Yes/No rows + multi-outcome, like the real `/prediction` UI | `…/collections/:id`, `…/collections/:id/markets`, `…/markets/batch-prices` |
-| Market | Two-book order book + a leverage order ticket | `…/markets/:id`, `…/markets/:id/orderbook`, `POST …/orders` |
+| Market | Two-book order book + a leverage order ticket | `…/markets/:id`, `…/markets/:id/all-depths`, `…/markets/batch-prices`, `POST …/orders` |
 | Portfolio | Your account's stats + open positions | `GET …/me/stats`, `…/me/positions` |
 
 ## Quick start
@@ -116,7 +118,7 @@ Your clock must be within ±30s of the server.
 Leverage is 1024's signature feature, implemented via **Cross Margin (全仓)**: one
 shared margin pool backs your positions, and an order's initial margin is
 `notional ÷ leverage`. The order ticket
-([`src/components/OrderTicket.tsx`](src/components/OrderTicket.tsx)) sends:
+([`src/components/TradePanel.tsx`](src/components/TradePanel.tsx)) sends:
 
 ```
 POST /api/v1/prediction/orders            (+ X-API-KEY / X-TIMESTAMP / X-SIGNATURE)

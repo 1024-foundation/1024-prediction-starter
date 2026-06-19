@@ -2,7 +2,9 @@
  * The 1024 two-book order book — ported from SingleOrderBook + BinaryOrderBook.
  * Yes and No books side by side; within each: asks (red) reversed on top, a
  * spread indicator, then bids (green). Columns Price | Size | Value with a
- * left-anchored depth bar. Prices arrive as e6 integers (650000 = $0.65).
+ * left-anchored depth bar. Prices here are probability FLOATS in [0,1]
+ * (0.65 = $0.65) — that is the orderbook/depth/all-depths wire format. (Only
+ * batch-prices and order placement use e6; see lib/api/types.ts.)
  */
 import { cn } from "@/lib/cn";
 import type { OrderBookLevel } from "@/lib/api/types";

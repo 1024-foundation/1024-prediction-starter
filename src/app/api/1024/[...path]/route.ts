@@ -20,13 +20,24 @@ async function handle(req: NextRequest, path: string[], method: "GET" | "POST" |
   const fullPath = "/" + path.join("/"); // e.g. /api/v1/prediction/orders
   const query = req.nextUrl.search.replace(/^\?/, "");
 
-  let body: unknown;
-  if (method !== "GET") {
-    const text = await req.text();
-    body = text ? JSON.parse(text) : undefined;
-  }
-
   try {
+    // Parse INSIDE the try so a malformed body returns the structured
+    // {success:false,error} envelope (400) instead of an unhandled framework 500.
+    let body: unknown;
+    if (method !== "GET") {
+      const text = await req.text();
+      if (text) {
+        try {
+          body = JSON.parse(text);
+        } catch {
+          return Response.json(
+            { success: false, error: { code: "BAD_REQUEST", message: "Invalid JSON body" } },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const data = await rawCall<unknown>(fullPath, {
       method,
       body,

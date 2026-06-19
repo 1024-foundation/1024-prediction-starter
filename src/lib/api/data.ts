@@ -115,7 +115,9 @@ export async function getAllDepths(
 export async function getBatchPrices(marketIds: string[]): Promise<Record<string, MarketPrices>> {
   const map: Record<string, MarketPrices> = {};
   for (let i = 0; i < marketIds.length; i += 50) {
-    const chunk = marketIds.slice(i, i + 50).map((x) => Number(x));
+    // Keep IDs as strings end-to-end (see format.ts: *Id fields lose precision
+    // past 2^53). The backend accepts string|number for batch-prices.
+    const chunk = marketIds.slice(i, i + 50);
     const res = await rawCall<{ prices: MarketPrices[] }>("/api/v1/prediction/markets/batch-prices", {
       method: "POST",
       body: { marketIds: chunk },
